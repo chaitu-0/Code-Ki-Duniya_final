@@ -1,4 +1,3 @@
-const Post = require("./models/post.js");
 const express = require("express");
 const connectDB = require("./config/db.js");
 const dotenv = require("dotenv");
@@ -19,18 +18,16 @@ app.use(cors());
 // Routes
 const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
+const postRoutes = require("./routes/postRoutes");
 
 app.use("/api/auth", authRoutes);
-app.use("/api/users", profileRoutes); // 🔹 Added profile routes
+app.use("/api/users", profileRoutes);
+app.use("/api/posts", postRoutes);
 
 // Root route
 app.get("/", (req, res) => {
-    res.send("🚀 API is running...");
+  res.send("🚀 API is running...");
 });
-
-//post route starting
-const postRoutes = require("./routes/postRoutes");
-app.use("/api/posts", postRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5050;
