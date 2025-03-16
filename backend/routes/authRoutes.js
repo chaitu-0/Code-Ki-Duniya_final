@@ -2,33 +2,37 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user.js");
-const protect = require("../middleware/authMiddleware");
-
 const router = express.Router();
 
 // 🔹 Register Route
 router.post("/register", async (req, res) => {
-  const { name, username, email, password } = req.body;
+  let { name, username, email, password } = req.body;
 
   try {
-    // 🔥 Check if all fields are provided (including username)
+    // 🔥 Trim all input fields to remove spaces
+    name = name.trim();
+    username = username.trim().toLowerCase(); // 🔹 Convert username to lowercase
+    email = email.trim().toLowerCase(); // 🔹 Convert email to lowercase
+
+    // 🔥 Check if all fields are provided
     if (!name || !username || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // 🔥 Check if username is already taken
-    let existingUser = await User.findOne({ username });
+    // 🔥 Check if username or email already exists
+    let existingUser = await User.findOne({ 
+      $or: [{ username }, { email }] 
+    });
+
     if (existingUser) {
-      return res.status(400).json({ message: "Username already taken" });
+      return res.status(400).json({ 
+        message: existingUser.username === username 
+          ? "Username already taken" 
+          : "Email already registered" 
+      });
     }
 
-    // 🔥 Check if email is already registered
-    let existingEmail = await User.findOne({ email });
-    if (existingEmail) {
-      return res.status(400).json({ message: "Email already registered" });
-    }
-
-    // Hash the password and create the new user
+    // 🔥 Hash the password and create the user
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ name, username, email, password: hashedPassword });
 
@@ -41,9 +45,11 @@ router.post("/register", async (req, res) => {
 
 // 🔹 Login Route
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
 
   try {
+    email = email.trim().toLowerCase(); // 🔹 Convert email to lowercase
+
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
@@ -55,6 +61,7 @@ router.post("/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
+
     res.json({
       token,
       user: {
