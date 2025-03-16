@@ -11,15 +11,26 @@ router.post("/register", async (req, res) => {
   const { name, username, email, password } = req.body;
 
   try {
-    if (!name || !email || !password) {
+    // 🔥 Check if all fields are provided (including username)
+    if (!name || !username || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: "User already exists" });
+    // 🔥 Check if username is already taken
+    let existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ message: "Username already taken" });
+    }
 
+    // 🔥 Check if email is already registered
+    let existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: "Email already registered" });
+    }
+
+    // Hash the password and create the new user
     const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ name, username, email, password: hashedPassword });
+    const user = new User({ name, username, email, password: hashedPassword });
 
     await user.save();
     res.status(201).json({ message: "User registered successfully" });
