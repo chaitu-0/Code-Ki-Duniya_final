@@ -21,7 +21,7 @@ const profileRoutes = require("./routes/profileRoutes");
 const postRoutes = require("./routes/postRoutes");
 
 app.use("/api/auth", authRoutes);
-app.use("/api/users", profileRoutes);
+app.use("/api/users", profileRoutes); // ✅ Correct path for profile routes
 app.use("/api/posts", postRoutes);
 
 // Root route
