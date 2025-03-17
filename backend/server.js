@@ -26,7 +26,11 @@ app.use("/api/posts", postRoutes);
 
 // Root route
 app.get("/", (req, res) => {
-  res.send("🚀 API is running...");
+  // res.send("Backend is Working .....");
+  res.status(201).json({
+    success : true,
+    massege : "Backend is Working"
+})
 });
 
 // Start the server
