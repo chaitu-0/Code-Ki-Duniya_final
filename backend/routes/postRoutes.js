@@ -37,7 +37,7 @@ router.get("/", auth, async (req, res) => {
             .populate("user", ["name", "email"])
             .sort({ createdAt: -1 });
         res.json(posts);
-       
+
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Server Error");
@@ -121,7 +121,7 @@ router.post(
                 user: req.user.id,
                 text: req.body.text,
             };
-
+            
             post.comments.push(newComment);
             await post.save();
             res.json(post.comments);
