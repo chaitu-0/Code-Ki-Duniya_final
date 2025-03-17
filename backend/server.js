@@ -1,3 +1,5 @@
+
+const Post = require("./models/post.js");
 const express = require("express");
 const connectDB = require("./config/db.js");
 const dotenv = require("dotenv");
@@ -18,18 +20,19 @@ app.use(cors());
 // Routes
 const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
-const postRoutes = require("./routes/postRoutes");
 
 app.use("/api/auth", authRoutes);
-app.use("/api/users", profileRoutes); // ✅ Correct path for profile routes
-app.use("/api/posts", postRoutes);
+app.use("/api/users", profileRoutes); // 🔹 Added profile routes
 
 // Root route
 app.get("/", (req, res) => {
-  res.send("Backend is Working .....");
-
+    res.send("🚀 API is running...");
 });
 
+//post route starting
+const postRoutes = require("./routes/postRoutes");
+app.use("/api/posts", postRoutes);
+
 // Start the server
-const PORT = process.env.PORT || 5050;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
