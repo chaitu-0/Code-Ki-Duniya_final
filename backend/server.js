@@ -1,38 +1,23 @@
-
-const Post = require("./models/post.js");
-const express = require("express");
-const connectDB = require("./config/db.js");
-const dotenv = require("dotenv");
-const cors = require("cors");
-
-// Load environment variables
-dotenv.config();
-
-// Connect to database
-connectDB();
+require('dotenv').config();
+const express = require('express');
+const mongoose = require('mongoose');
 
 const app = express();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('✅ Database connected!'))
+    .catch(err => console.error('❌ Database connection error:', err));
 
 // Routes
-const authRoutes = require("./routes/authRoutes");
-const profileRoutes = require("./routes/profileRoutes");
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/posts', require('./routes/postRoutes')); // If you have post routes
 
-app.use("/api/auth", authRoutes);
-app.use("/api/users", profileRoutes); // 🔹 Added profile routes
-
-// Root route
-app.get("/", (req, res) => {
-    res.send("🚀 API is running...");
-});
-
-//post route starting
-const postRoutes = require("./routes/postRoutes");
-app.use("/api/posts", postRoutes);
-
-// Start the server
+// Server Listening
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+});

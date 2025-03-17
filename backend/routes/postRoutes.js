@@ -1,154 +1,89 @@
-const express = require("express");
-const { check, validationResult } = require("express-validator");
-const auth = require("../middleware/authMiddleware");
-const Post = require("../models/post");
+const express = require('express');
+const Post = require('../models/Post');
+const { authenticateJWT } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// 📌 Create a Post (Protected Route)
-router.post(
-    "/",
-    [auth, [check("text", "Text is required").not().isEmpty()]],
-    async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-
-        try {
-            const newPost = new Post({
-                user: req.user.id,
-                text: req.body.text,
-            });
-
-            const post = await newPost.save();
-            res.json(post);
-        } catch (err) {
-            console.error(err.message);
-            res.status(500).send("Server Error");
-        }
-    },
-);
-
-// 📌 Get All Posts (Protected Route)
-router.get("/", auth, async (req, res) => {
+// Create a Post
+router.post('/', authenticateJWT, async (req, res) => {
     try {
-        const posts = await Post.find()
-            .populate("user", ["name", "email"])
-            .sort({ createdAt: -1 });
-        res.json(posts);
-
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
-    }
-});
-
-// 📌 Update a Post (NEWLY ADDED)
-router.put(
-    "/:id",
-    [auth, [check("text", "Text is required").not().isEmpty()]],
-    async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-
-        try {
-            const post = await Post.findById(req.params.id);
-            if (!post)
-                return res.status(404).json({ message: "Post not found" });
-
-            // Check if the logged-in user is the owner
-            if (post.user.toString() !== req.user.id) {
-                return res
-                    .status(401)
-                    .json({ message: "Not authorized to edit this post" });
-            }
-
-            // Update post text
-            post.text = req.body.text;
-            await post.save();
-
-            res.json(post);
-        } catch (err) {
-            console.error(err.message);
-            res.status(500).send("Server Error");
-        }
-    },
-);
-
-// 📌 Like/Unlike a Post (Protected Route)
-router.put("/like/:id", auth, async (req, res) => {
-    try {
-        const post = await Post.findById(req.params.id);
-        if (!post) return res.status(404).json({ message: "Post not found" });
-
-        const likedIndex = post.likes.findIndex(
-            (like) => like.user.toString() === req.user.id,
-        );
-
-        if (likedIndex !== -1) {
-            post.likes.splice(likedIndex, 1); // Unlike the post
-        } else {
-            post.likes.push({ user: req.user.id }); // Like the post
-        }
-
+        const post = new Post({ user: req.user.id, text: req.body.text });
         await post.save();
-        res.json(post.likes);
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
+        res.status(201).json(post);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
-// 📌 Add Comment to a Post (Protected Route)
-router.post(
-    "/comment/:id",
-    [auth, [check("text", "Text is required").not().isEmpty()]],
-    async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
+// Get All Posts
+router.get('/', async (req, res) => {
+    try {
+        const posts = await Post.find().populate('user', 'name username');
+        res.json(posts);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
-        try {
-            const post = await Post.findById(req.params.id);
-            if (!post)
-                return res.status(404).json({ message: "Post not found" });
-
-            const newComment = {
-                user: req.user.id,
-                text: req.body.text,
-            };
-            
-            post.comments.push(newComment);
-            await post.save();
-            res.json(post.comments);
-        } catch (err) {
-            console.error(err.message);
-            res.status(500).send("Server Error");
-        }
-    },
-);
-
-// 📌 Delete a Post (Protected Route)
-router.delete("/:id", auth, async (req, res) => {
+// Update a Post
+router.put('/:id', authenticateJWT, async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
-        if (!post) return res.status(404).json({ message: "Post not found" });
-
-        if (post.user.toString() !== req.user.id) {
-            return res
-                .status(401)
-                .json({ message: "Not authorized to delete this post" });
+        if (!post || post.user.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Unauthorized' });
         }
+        post.text = req.body.text || post.text;
+        await post.save();
+        res.json(post);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
+// Like/Unlike a Post
+router.put('/like/:id', authenticateJWT, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ error: 'Post not found' });
+
+        if (post.likes.includes(req.user.id)) {
+            post.likes = post.likes.filter(userId => userId.toString() !== req.user.id);
+        } else {
+            post.likes.push(req.user.id);
+        }
+        await post.save();
+        res.json(post);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Add Comment to a Post
+router.post('/comment/:id', authenticateJWT, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post) return res.status(404).json({ error: 'Post not found' });
+
+        const comment = { user: req.user.id, text: req.body.text, createdAt: new Date() };
+        post.comments.push(comment);
+        await post.save();
+        res.json(post);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Delete a Post
+router.delete('/:id', authenticateJWT, async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        if (!post || post.user.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Unauthorized' });
+        }
         await post.deleteOne();
-        res.json({ message: "Post deleted" });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send("Server Error");
+        res.json({ message: 'Post deleted' });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
     }
 });
 

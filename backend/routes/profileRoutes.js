@@ -1,12 +1,29 @@
-const express = require("express");
-const { getUserProfile, updateUserProfile, deleteUser } = require("../controllers/profileController");
-const authMiddleware = require("../middleware/authMiddleware");
-
+const express = require('express');
+const Profile = require('../models/Profile');
 const router = express.Router();
 
-// ✅ Correct routes
-router.get("/profile", authMiddleware, getUserProfile);
-router.put("/profile", authMiddleware, updateUserProfile); // ✅ Fix PUT request
-router.delete("/profile", authMiddleware, deleteUser);
+// Create or Update Profile
+router.post('/', async (req, res) => {
+    try {
+        const profile = await Profile.findOneAndUpdate(
+            { user: req.user.id },
+            { ...req.body, user: req.user.id },
+            { new: true, upsert: true }
+        );
+        res.json(profile);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Get Profile by User ID
+router.get('/:userId', async (req, res) => {
+    try {
+        const profile = await Profile.findOne({ user: req.params.userId }).populate('user', 'name username');
+        res.json(profile);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
 module.exports = router;

@@ -1,20 +1,15 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
 
-const protect = (req, res, next) => {
-  let token;
-  if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+exports.authenticateJWT = (req, res, next) => {
+    const token = req.header('Authorization');
+
+    if (!token) return res.status(401).json({ error: 'Access Denied' });
+
     try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user = decoded; // Attach user data to request
-      next();
+        const decoded = jwt.verify(token.split(" ")[1], process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
     } catch (error) {
-      return res.status(401).json({ message: "Not authorized, token failed" });
+        res.status(403).json({ error: 'Invalid Token' });
     }
-  }
-  if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
-  }
 };
-
-module.exports = protect;
